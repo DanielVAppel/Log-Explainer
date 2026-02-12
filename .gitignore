@@ -1,0 +1,25 @@
+# ---- Large datasets (do not commit) ----
+HDFS_v1/
+!HDFS_v1/README.md
+!HDFS_v1/.gitkeep
+
+# If you want to keep only the preprocessed CSVs but not raw logs, use this instead:
+# HDFS_v1/HDFS.log
+# HDFS_v1/HDFS.npz
+
+# ---- Generated index/artifacts ----
+index/
+*.index
+*.npy
+*.jsonl
+
+# ---- Python ----
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# ---- OS / editor ----
+.DS_Store
+.vscode/

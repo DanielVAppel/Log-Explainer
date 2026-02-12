@@ -20,7 +20,7 @@ other log files.
 ```bash
 ollama pull llama3
 
-pip install -r requirements.txt
+python m -pip install -r requirements.txt
 
 python ingest.py ^
   --log-path "C:/Users/vince/Downloads/HDFS_v1/HDFS.log" ^
@@ -28,8 +28,17 @@ python ingest.py ^
   --index-dir "index" ^
   --chunk-lines 200
 
+or(one line)
+
+python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 200
+
+(in a new seperate termianl run the following:)
 ollama serve
 
+(in the previous terminal run the following:)
 python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
 
 python query.py "What patterns do you see around block blk_-3544583377289625738?"
+
+# Another Way to Run:
+.\run_ingest_and_query.bat

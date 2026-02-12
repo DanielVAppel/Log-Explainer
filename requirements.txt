@@ -1,0 +1,11 @@
+# Core
+numpy
+pandas
+tqdm
+
+# Embeddings + vector DB
+sentence-transformers
+faiss-cpu
+
+# For calling a local LLM via Ollama HTTP API
+requests
