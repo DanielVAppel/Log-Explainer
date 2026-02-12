@@ -20,7 +20,7 @@ other log files.
 ```bash
 ollama pull llama3
 
-python m -pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 python ingest.py ^
   --log-path "C:/Users/vince/Downloads/HDFS_v1/HDFS.log" ^
@@ -42,3 +42,10 @@ python query.py "What patterns do you see around block blk_-3544583377289625738?
 
 # Another Way to Run:
 .\run_ingest_and_query.bat
+
+# Other Useful commands:
+ollama list #Shows all avaiable models
+ollama --version #shows the current version and verifies ollama is installed.
+
+#(in Powershell)
+where.exe ollama #finds the filepath for Ollama, useful for adding to environment PATH
