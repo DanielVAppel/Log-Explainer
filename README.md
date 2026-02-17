@@ -54,7 +54,10 @@ python query.py "Summarize what is going wrong with the anomalous blocks." --ano
 # --Interactive Mode--
 # This mode lets you continously ask questions without reloading the model each time and is recommended when tags and search parameters do not need to be changed.
 python query.py --interactive --anomalies-only --top-k 1
-
+#examples:
+Summarize what is going wrong with anomalous blocks.
+What events happen right before blocks get added to invalidSet?
+exit
 # Other Useful commands:
 ollama list #Shows all avaiable models
 ollama --version #shows the current version and verifies ollama is installed.
