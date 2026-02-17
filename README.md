@@ -17,6 +17,7 @@ other log files.
 - [Ollama](https://ollama.com/) installed and running (`ollama serve`)
 - A pulled model, for example:
 
+# Run the following Commands once initially:
 ```bash
 ollama pull llama3
 
@@ -32,20 +33,30 @@ or(one line)
 
 python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 200
 
-(in a new seperate termianl run the following:)
+# Smaller size if wanted
+python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 80
+
+
+# (in a new seperate termianl run the following everytime you want the program to run:)
 ollama serve
 
-(in the previous terminal run the following:)
+# (in a seperate terminal run the following to test the program:)
 python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
-
+python query.py "Summarize what is going wrong with the anomalous blocks." --top-k 1
 python query.py "What patterns do you see around block blk_-3544583377289625738?"
 
-# Another Way to Run:
+# Another Way to Run: (only reccomended for the first time)
 .\run_ingest_and_query.bat
 
 # Other Useful commands:
 ollama list #Shows all avaiable models
 ollama --version #shows the current version and verifies ollama is installed.
+python query.py "What is the main error here?" --anomalies-only --top-k 1 #take smaller chunks of data.
+ollama run llama3 "say hi in 5 words" #Tests if model can respond
 
 #(in Powershell)
 where.exe ollama #finds the filepath for Ollama, useful for adding to environment PATH
+
+# On any future runs for the program, only the following two commands in are needed in seperate terminals:
+ollama serve
+python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only # example

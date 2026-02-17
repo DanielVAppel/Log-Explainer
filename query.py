@@ -45,21 +45,39 @@ def retrieve_chunks(
     top_k: int,
     anomalies_only: bool,
 ) -> List[Dict]:
-    distances, indices = index.search(query_vec, top_k * 2)
-    # indices shape: (1, N)
+    """
+    Retrieve candidate chunks from FAISS, then optionally filter to only those
+    that contain anomalous blocks. We fetch a larger pool first because anomalous
+    chunks can be sparse.
+    """
 
-    results: List[Dict] = []
-    for idx in indices[0]:
-        if idx < 0 or idx >= len(metadata):
-            continue
-        chunk = metadata[idx]
-        if anomalies_only and not chunk.get("has_anomaly", False):
-            continue
-        results.append(chunk)
-        if len(results) >= top_k:
-            break
+    def _search_with_pool(pool_size: int) -> List[Dict]:
+        distances, indices = index.search(query_vec, pool_size)
+
+        results: List[Dict] = []
+        for idx in indices[0]:
+            if idx < 0 or idx >= len(metadata):
+                continue
+
+            chunk = metadata[idx]
+            if anomalies_only and not chunk.get("has_anomaly", False):
+                continue
+
+            results.append(chunk)
+            if len(results) >= top_k:
+                break
+        return results
+
+    # First attempt: modest pool (fast)
+    pool = max(200, top_k * 50)
+    results = _search_with_pool(pool)
+
+    # Retry if anomalies_only removed everything (common when anomalies are sparse)
+    if anomalies_only and not results:
+        pool2 = max(2000, top_k * 500)
+        results = _search_with_pool(pool2)
+
     return results
-
 
 def call_ollama(prompt: str, model: str = "llama3") -> str:
     """
@@ -72,7 +90,7 @@ def call_ollama(prompt: str, model: str = "llama3") -> str:
         "prompt": prompt,
         "stream": False,
     }
-    resp = requests.post(url, json=payload, timeout=300)
+    resp = requests.post(url, json=payload, timeout=1200) #Adjust this to change how long to wait for a response (in seconds)
     resp.raise_for_status()
     data = resp.json()
     return data.get("response", "").strip()
@@ -97,7 +115,7 @@ def build_prompt(question: str, chunks: List[Dict]) -> str:
             f"block_ids={', '.join(c.get('block_ids', [])[:8])}"
         )
         parts.append(header)
-        parts.append(c["text"])
+        parts.append(c["text"][:4000]) #[:4000] is an example limit for each chunk to avoid major computation time with balanced results.
         parts.append("-" * 80)
 
     parts.append("Answer clearly and concisely:")
