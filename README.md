@@ -44,7 +44,7 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 # (in a seperate terminal run the following one at a time to test the program:)
 - python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
 - python query.py "Summarize what is going wrong with the anomalous blocks." --top-k 1
-- python query.py "What patterns do you see around block blk_-3544583377289625738?"
+- python query.py "What patterns do you see around block blk_-3544583377289625738?" #replace with block in top-k results.
 
 # Another Way to Run: (only reccomended for the first time)
 - .\run_ingest_and_query.bat
@@ -60,6 +60,7 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 #examples:
 - Summarize what is going wrong with anomalous blocks.
 - What events happen right before blocks get added to invalidSet?
+- What malicious patterns or errors can you identify within the blocks causing them to be labeled as an anomaly?
 - exit
 
 # Other Useful commands:
