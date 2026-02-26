@@ -37,7 +37,7 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 # Smaller size if wanted
 python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 80
 
-```bash
+```
 # (in a new seperate termianl run the following everytime you want the program to run:)
 ollama serve
 
