@@ -14,8 +14,9 @@ other log files.
 
 - Python 3.9+ (recommended)
 - Git (optional)
+- The HDFS_v1 dataset avaiable for download at: https://github.com/logpai/loghub/tree/master?tab=readme-ov-file
 - [Ollama](https://ollama.com/) installed and running (`ollama serve`)
-- A pulled model, for example:
+- Any other pulled model of choice
 
 # Run the following Commands once initially:
 ```bash
@@ -36,6 +37,7 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 # Smaller size if wanted
 python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 80
 
+```bash
 # (in a new seperate termianl run the following everytime you want the program to run:)
 ollama serve
 
@@ -58,6 +60,7 @@ python query.py --interactive --anomalies-only --top-k 1
 Summarize what is going wrong with anomalous blocks.
 What events happen right before blocks get added to invalidSet?
 exit
+
 # Other Useful commands:
 ollama list #Shows all avaiable models
 ollama --version #shows the current version and verifies ollama is installed.
