@@ -39,33 +39,34 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 
 ```
 # (in a new seperate termianl run the following everytime you want the program to run:)
-ollama serve
+- ollama serve
 
 # (in a seperate terminal run the following one at a time to test the program:)
-python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
-python query.py "Summarize what is going wrong with the anomalous blocks." --top-k 1
-python query.py "What patterns do you see around block blk_-3544583377289625738?"
+- python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
+- python query.py "Summarize what is going wrong with the anomalous blocks." --top-k 1
+- python query.py "What patterns do you see around block blk_-3544583377289625738?"
 
 # Another Way to Run: (only reccomended for the first time)
-.\run_ingest_and_query.bat
+- .\run_ingest_and_query.bat
 
 # On any future runs for the program, only the following two commands in are needed in seperate terminals:
-ollama serve
-python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only # example
+- ollama serve
+- python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only # example
 
 # --Interactive Mode--
 # This mode lets you continously ask questions without reloading the model each time and is recommended when tags and search parameters do not need to be changed.
-python query.py --interactive --anomalies-only --top-k 1
+- python query.py --interactive --anomalies-only --top-k 1
+
 #examples:
-Summarize what is going wrong with anomalous blocks.
-What events happen right before blocks get added to invalidSet?
-exit
+- Summarize what is going wrong with anomalous blocks.
+- What events happen right before blocks get added to invalidSet?
+- exit
 
 # Other Useful commands:
-ollama list #Shows all avaiable models
-ollama --version #shows the current version and verifies ollama is installed.
-python query.py "What is the main error here?" --anomalies-only --top-k 1 #take smaller chunks of data.
-ollama run llama3 "say hi in 5 words" #Tests if model can respond
+- ollama list #Shows all avaiable models
+- ollama --version #shows the current version and verifies ollama is installed.
+- python query.py "What is the main error here?" --anomalies-only --top-k 1 #take smaller chunks of data.
+- ollama run llama3 "say hi in 5 words" #Tests if model can respond
 
 #(in Powershell)
-where.exe ollama #finds the filepath for Ollama, useful for adding to environment PATH
+- where.exe ollama #finds the filepath for Ollama, useful for adding to environment PATH
