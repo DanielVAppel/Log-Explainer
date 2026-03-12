@@ -1,7 +1,4 @@
-# Log-Explainer
-This project lets you ask natural-language questions about a log dataset and get answers from a local generative model ->
-
-# HDFS Log Explainer (RAG + Local LLM)
+# Log Explainer (RAG + Local LLM)
 
 This project lets you **ask natural-language questions** about the
 HDFS log dataset and get answers from a local **generative model** (via
@@ -39,7 +36,7 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 - ollama serve
 
 # (in a seperate terminal run the following one at a time to test the program:)
-- .\.venv\Scripts\activate
+- `.\.venv\Scripts\activate`
 - python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
 - python query.py "Summarize what is going wrong with the anomalous blocks." --top-k 1
 - python query.py "What patterns do you see around block blk_-3544583377289625738?" #replace with block in top-k results.
