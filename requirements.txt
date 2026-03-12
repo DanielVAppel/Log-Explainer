@@ -1,11 +1,16 @@
 # Core
-numpy
+numpy<2
 pandas
 tqdm
 
 # Embeddings + vector DB
-sentence-transformers
+sentence-transformers==3.2.1
 faiss-cpu
+
+# ML / transformer backend (pinned for compatibility)
+torch==2.1.2
+transformers==4.45.2
+tokenizers==0.20.3
 
 # For calling a local LLM via Ollama HTTP API
 requests

@@ -20,17 +20,13 @@ other log files.
 
 # Run the following Commands once initially:
 ```bash
-ollama pull llama3
-
+python -m venv .venv
+.\.venv\Scripts\activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+deactivate
 
-python ingest.py ^
-  --log-path "C:/Users/vince/Downloads/HDFS_v1/HDFS.log" ^
-  --anomaly-labels "C:/Users/vince/Downloads/HDFS_v1/preprocessed/anomaly_label.csv" ^
-  --index-dir "index" ^
-  --chunk-lines 200
-
-or(one line)
+ollama pull llama3
 
 python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 200
 
@@ -38,20 +34,15 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preprocessed\anomaly_label.csv" --index-dir "index" --chunk-lines 80
 
 ```
-# (in a new seperate termianl run the following everytime you want the program to run:)
+# (Run the following everytime you want the program to run:)
+  # In a seperate terminal start the server:
 - ollama serve
 
 # (in a seperate terminal run the following one at a time to test the program:)
+- .\.venv\Scripts\activate
 - python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only
 - python query.py "Summarize what is going wrong with the anomalous blocks." --top-k 1
 - python query.py "What patterns do you see around block blk_-3544583377289625738?" #replace with block in top-k results.
-
-# Another Way to Run: (only reccomended for the first time)
-- .\run_ingest_and_query.bat
-
-# On any future runs for the program, only the following two commands in are needed in seperate terminals:
-- ollama serve
-- python query.py "Summarize what is going wrong with the anomalous blocks." --anomalies-only # example
 
 # --Interactive Mode--
 # This mode lets you continously ask questions without reloading the model each time and is recommended when tags and search parameters do not need to be changed.
@@ -63,11 +54,12 @@ python ingest.py --log-path "HDFS_v1\HDFS.log" --anomaly-labels "HDFS_v1\preproc
 - What malicious patterns or errors can you identify within the blocks causing them to be labeled as an anomaly?
 - exit
 
-# Other Useful commands:
+# Other Useful commands for debugging:
 - ollama list #Shows all avaiable models
 - ollama --version #shows the current version and verifies ollama is installed.
 - python query.py "What is the main error here?" --anomalies-only --top-k 1 #take smaller chunks of data.
 - ollama run llama3 "say hi in 5 words" #Tests if model can respond
-
-#(in Powershell)
+# Another Way to Run: (only reccomended for the first time)
+- .\run_ingest_and_query.bat
+# (in Powershell)
 - where.exe ollama #finds the filepath for Ollama, useful for adding to environment PATH
