@@ -123,17 +123,82 @@ def build_prompt(question: str, chunks: List[Dict]) -> str:
     parts.append("Answer clearly and concisely:")
     return "\n".join(parts)
 
+def score_line(line: str, block_ids: List[str]) -> int:
+    """
+    Give a simple score to a log line based on suspicious keywords
+    and whether it mentions one of the chunk's block IDs.
+    """
+    line_lower = line.lower()
+    score = 0
+
+    keywords = {
+        "error": 3,
+        "warn": 2,
+        "exception": 4,
+        "fail": 3,
+        "failed": 3,
+        "invalid": 3,
+        "invalidset": 4,
+        "delete": 2,
+        "deleting": 2,
+        "corrupt": 4,
+        "blk_": 2,
+    }
+
+    for keyword, weight in keywords.items():
+        if keyword in line_lower:
+            score += weight
+
+    for bid in block_ids:
+        if bid in line:
+            score += 5
+
+    return score
+
+
+def extract_highlighted_lines(chunks: List[Dict], max_lines_per_chunk: int = 3) -> List[str]:
+    """
+    From each retrieved chunk, extract the most suspicious lines.
+    """
+    highlighted = []
+
+    for i, chunk in enumerate(chunks, start=1):
+        lines = chunk["text"].splitlines()
+        block_ids = chunk.get("block_ids", [])
+
+        scored_lines = []
+        for offset, line in enumerate(lines):
+            score = score_line(line, block_ids)
+            if score > 0:
+                actual_line_num = chunk["start_line"] + offset
+                scored_lines.append((score, actual_line_num, line))
+
+        scored_lines.sort(key=lambda x: x[0], reverse=True)
+
+        for score, actual_line_num, line in scored_lines[:max_lines_per_chunk]:
+            highlighted.append(
+                f"[Snippet {i} | line {actual_line_num} | score {score}] {line}"
+            )
+
+    return highlighted
 
 def print_answer(answer: str, chunks: List[Dict]):
+    highlighted_lines = extract_highlighted_lines(chunks)
+
+    if highlighted_lines:
+        print("\n=== HIGHLIGHTED LINES ===\n")
+        for line in highlighted_lines:
+            print(line)
+
     print("\n=== ANSWER ===\n")
     print(answer)
+
     print("\n=== USED SNIPPETS ===")
     for i, c in enumerate(chunks, start=1):
         print(
             f"{i}. {c['file']} lines {c['start_line']}-{c['end_line']} "
             f"(has_anomaly={c.get('has_anomaly', False)})"
         )
-
 
 def run_one_question(
     question: str,
