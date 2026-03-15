@@ -97,12 +97,48 @@ def call_ollama(prompt: str, model: str = "llama3") -> str:
     data = resp.json()
     return data.get("response", "").strip()
 
+def summarize_trace_data(trace_data: Dict, max_blocks: int = 3) -> List[str]:
+    lines = []
+    for i, (block_id, info) in enumerate(trace_data.items()):
+        if i >= max_blocks:
+            break
+        features = info.get("features", "")
+        lines.append(
+            f"{block_id}: label={info.get('trace_label', '')}, "
+            f"type={info.get('trace_type', '')}, "
+            f"features={features[:200]}"
+        )
+    return lines
+
+
+def summarize_occurrence_data(occurrence_data: Dict, max_blocks: int = 3) -> List[str]:
+    lines = []
+    for i, (block_id, info) in enumerate(occurrence_data.items()):
+        if i >= max_blocks:
+            break
+        top_counts = info.get("top_event_counts", {})
+        lines.append(
+            f"{block_id}: label={info.get('occurrence_label', '')}, "
+            f"type={info.get('occurrence_type', '')}, "
+            f"top_event_counts={top_counts}"
+        )
+    return lines
+
+
+def summarize_templates(event_templates: Dict, max_templates: int = 8) -> List[str]:
+    lines = []
+    for i, (event_id, template) in enumerate(event_templates.items()):
+        if i >= max_templates:
+            break
+        lines.append(f"{event_id}: {template}")
+    return lines
 
 def build_prompt(question: str, chunks: List[Dict]) -> str:
     parts = [
         "You are a helpful log analysis assistant.",
-        "You are given HDFS log snippets and a question.",
-        "Use only the information in the snippets to answer.",
+        "You are given HDFS log snippets, anomaly metadata, event traces, event occurrence summaries, and event templates.",
+        "Use all of this information together to answer the question.",
+        "You may make reasonable interpretations, but ground them in the provided evidence.",
         "",
         f"Question: {question}",
         "",
@@ -117,7 +153,24 @@ def build_prompt(question: str, chunks: List[Dict]) -> str:
             f"block_ids={', '.join(c.get('block_ids', [])[:8])}"
         )
         parts.append(header)
-        parts.append(c["text"][:4000])  # cap each chunk to keep prompts manageable
+
+        trace_lines = summarize_trace_data(c.get("trace_data", {}))
+        if trace_lines:
+            parts.append("Event trace summary:")
+            parts.extend(trace_lines)
+
+        occurrence_lines = summarize_occurrence_data(c.get("occurrence_data", {}))
+        if occurrence_lines:
+            parts.append("Event occurrence summary:")
+            parts.extend(occurrence_lines)
+
+        template_lines = summarize_templates(c.get("event_templates", {}))
+        if template_lines:
+            parts.append("Relevant event templates:")
+            parts.extend(template_lines)
+
+        parts.append("Raw log text:")
+        parts.append(c["text"][:4000])
         parts.append("-" * 80)
 
     parts.append("Answer clearly and concisely:")

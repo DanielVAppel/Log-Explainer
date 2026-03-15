@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Enhancement note:
+'''This version improves retrieval by building FAISS embeddings from an enriched text representation of each chunk instead of using only the raw log lines. In version 1, structured metadata (anomaly labels, event traces, event occurrence summaries, and event templates) was only added at prompt time, which helped the LLM explain retrieved chunks but did not help FAISS retrieve better chunks in the first place. By incorporating compact structured metadata into the embedding text, retrieval can better match queries that depend on event patterns, anomaly context, and template-level information rather than only the wording of raw log lines.'''
+
 import argparse
 import json
 import os
@@ -202,6 +205,58 @@ def build_chunk(
         "event_templates": chunk_templates,
     }
 
+def build_embedding_text(chunk: Dict) -> str:
+    """
+    Build an enriched text representation for embedding.
+    This helps FAISS retrieval use both raw log content and compact structured metadata.
+    """
+    parts = []
+
+    parts.append(f"file={chunk['file']}")
+    parts.append(f"lines={chunk['start_line']}-{chunk['end_line']}")
+    parts.append(f"has_anomaly={chunk.get('has_anomaly', False)}")
+
+    block_ids = chunk.get("block_ids", [])[:8]
+    if block_ids:
+        parts.append("block_ids: " + ", ".join(block_ids))
+
+    trace_data = chunk.get("trace_data", {})
+    if trace_data:
+        parts.append("event trace summary:")
+        for i, (block_id, info) in enumerate(trace_data.items()):
+            if i >= 3:
+                break
+            features = info.get("features", "")
+            parts.append(
+                f"{block_id}: label={info.get('trace_label', '')}, "
+                f"type={info.get('trace_type', '')}, "
+                f"features={features[:150]}"
+            )
+
+    occurrence_data = chunk.get("occurrence_data", {})
+    if occurrence_data:
+        parts.append("event occurrence summary:")
+        for i, (block_id, info) in enumerate(occurrence_data.items()):
+            if i >= 3:
+                break
+            parts.append(
+                f"{block_id}: label={info.get('occurrence_label', '')}, "
+                f"type={info.get('occurrence_type', '')}, "
+                f"top_event_counts={info.get('top_event_counts', {})}"
+            )
+
+    event_templates = chunk.get("event_templates", {})
+    if event_templates:
+        parts.append("event templates:")
+        for i, (event_id, template) in enumerate(event_templates.items()):
+            if i >= 6:
+                break
+            parts.append(f"{event_id}: {template}")
+
+    parts.append("raw log text:")
+    parts.append(chunk["text"][:4000])
+
+    return "\n".join(parts)
 
 def build_index(chunks: List[Dict], index_dir: str, model_name: str):
     os.makedirs(index_dir, exist_ok=True)
@@ -209,7 +264,8 @@ def build_index(chunks: List[Dict], index_dir: str, model_name: str):
     print(f"[ingest] Loading embedding model: {model_name}")
     model = SentenceTransformer(model_name)
 
-    texts = [c["text"] for c in chunks]
+    # Build embeddings from enriched chunk text rather than raw log text only.
+    texts = [build_embedding_text(c) for c in chunks]
 
     print("[ingest] Computing embeddings...")
     embeddings = model.encode(texts, batch_size=32, show_progress_bar=True)
