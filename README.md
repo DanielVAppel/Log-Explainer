@@ -1,3 +1,4 @@
+# LogInsight: Interpreting Log Anomalies using Hybrid Retrieval and Large Language Models
 # HDFS Log Explainer (RAG + Local LLM)
 
 This Project was created to fufill my Masters Project requirement This project lets you **ask natural-language questions** about the HDFS log dataset and get answers from a local **generative model** (via [Ollama](https://ollama.com/)), using a vector index over log chunks.
