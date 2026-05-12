@@ -7,7 +7,7 @@ import json
 import os
 import re
 from typing import List, Dict, Optional
-
+from source_parsers import get_parser
 import faiss
 import numpy as np
 import pandas as pd
@@ -96,53 +96,48 @@ def top_event_counts(event_counts: Dict[str, int], top_n: int = 5) -> Dict[str, 
 def chunk_log_file(
     log_path: str,
     chunk_lines: int,
-    labels: Dict[str, str],
-    event_traces: Dict[str, Dict],
-    event_occurrence: Dict[str, Dict],
-    log_templates: Dict[str, str],
+    parser,
+    artifacts: Dict,
 ) -> List[Dict]:
     chunks = []
     current_lines = []
     current_start_line = 1
-    current_block_ids = set()
+    current_identifiers = set()
 
     with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
         for lineno, line in enumerate(f, start=1):
-            current_lines.append(line.rstrip("\n"))
+            clean_line = line.rstrip("\n")
+            current_lines.append(clean_line)
 
-            for m in BLOCK_ID_REGEX.findall(line):
-                current_block_ids.add(m)
+            current_identifiers.update(parser.extract_ids_from_line(clean_line))
 
             if lineno % chunk_lines == 0:
                 chunks.append(
                     build_chunk(
-                        log_path,
-                        current_start_line,
-                        lineno,
-                        current_lines,
-                        current_block_ids,
-                        labels,
-                        event_traces,
-                        event_occurrence,
-                        log_templates,
+                        log_path=log_path,
+                        start_line=current_start_line,
+                        end_line=lineno,
+                        lines=current_lines,
+                        identifiers=current_identifiers,
+                        parser=parser,
+                        artifacts=artifacts,
                     )
                 )
+
                 current_lines = []
-                current_block_ids = set()
+                current_identifiers = set()
                 current_start_line = lineno + 1
 
         if current_lines:
             chunks.append(
                 build_chunk(
-                    log_path,
-                    current_start_line,
-                    lineno,
-                    current_lines,
-                    current_block_ids,
-                    labels,
-                    event_traces,
-                    event_occurrence,
-                    log_templates,
+                    log_path=log_path,
+                    start_line=current_start_line,
+                    end_line=lineno,
+                    lines=current_lines,
+                    identifiers=current_identifiers,
+                    parser=parser,
+                    artifacts=artifacts,
                 )
             )
 
@@ -155,70 +150,54 @@ def build_chunk(
     start_line: int,
     end_line: int,
     lines: List[str],
-    block_ids: set,
-    labels: Dict[str, str],
-    event_traces: Dict[str, Dict],
-    event_occurrence: Dict[str, Dict],
-    log_templates: Dict[str, str],
+    identifiers: set,
+    parser,
+    artifacts: Dict,
 ) -> Dict:
     text = "\n".join(lines)
-    block_ids_sorted = sorted(list(block_ids))
 
-    has_anomaly = any(labels.get(bid, "Normal") == "Anomaly" for bid in block_ids_sorted)
+    parser_metadata = parser.enrich_chunk(
+        chunk_text=text,
+        identifiers=identifiers,
+        artifacts=artifacts,
+    )
 
-    chunk_trace_data = {}
-    chunk_occurrence_data = {}
-    chunk_templates = {}
-    chunk_event_ids = set()
-
-    for bid in block_ids_sorted:
-        if bid in event_traces:
-            trace_info = event_traces[bid]
-            chunk_trace_data[bid] = trace_info
-            for event_id in extract_event_ids(trace_info.get("features", "")):
-                chunk_event_ids.add(event_id)
-
-        if bid in event_occurrence:
-            occ_info = event_occurrence[bid]
-            counts = occ_info.get("event_counts", {})
-            chunk_occurrence_data[bid] = {
-                "occurrence_label": occ_info.get("occurrence_label", ""),
-                "occurrence_type": occ_info.get("occurrence_type", ""),
-                "top_event_counts": top_event_counts(counts, top_n=5),
-            }
-            for event_id in counts.keys():
-                chunk_event_ids.add(event_id)
-
-    for event_id in sorted(chunk_event_ids):
-        if event_id in log_templates:
-            chunk_templates[event_id] = log_templates[event_id]
-
-    return {
+    chunk = {
         "file": os.path.basename(log_path),
         "start_line": start_line,
         "end_line": end_line,
-        "block_ids": block_ids_sorted,
-        "has_anomaly": has_anomaly,
         "text": text,
-        "trace_data": chunk_trace_data,
-        "occurrence_data": chunk_occurrence_data,
-        "event_templates": chunk_templates,
     }
+
+    chunk.update(parser_metadata)
+
+    return chunk
 
 def build_embedding_text(chunk: Dict) -> str:
     """
     Build an enriched text representation for embedding.
-    This helps FAISS retrieval use both raw log content and compact structured metadata.
+    Works for HDFS and future log types.
     """
     parts = []
 
+    parts.append(f"source_type={chunk.get('source_type', 'unknown')}")
     parts.append(f"file={chunk['file']}")
     parts.append(f"lines={chunk['start_line']}-{chunk['end_line']}")
     parts.append(f"has_anomaly={chunk.get('has_anomaly', False)}")
 
-    block_ids = chunk.get("block_ids", [])[:8]
+    identifiers = chunk.get("identifiers", [])
+    if identifiers:
+        parts.append("identifiers: " + ", ".join(identifiers[:10]))
+
+    block_ids = chunk.get("block_ids", [])
     if block_ids:
-        parts.append("block_ids: " + ", ".join(block_ids))
+        parts.append("block_ids: " + ", ".join(block_ids[:8]))
+
+    source_metadata = chunk.get("source_metadata", {})
+    if source_metadata:
+        parts.append("source metadata:")
+        for key, value in source_metadata.items():
+            parts.append(f"{key}: {str(value)[:300]}")
 
     trace_data = chunk.get("trace_data", {})
     if trace_data:
@@ -293,8 +272,22 @@ def build_index(chunks: List[Dict], index_dir: str, model_name: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingest HDFS logs and build a vector index.")
-    parser.add_argument("--log-path", required=True, help="Path to HDFS.log")
+    parser = argparse.ArgumentParser(description="Ingest logs and build a vector index.")
+
+    parser.add_argument(
+        "--log-type",
+        default="hdfs",
+        choices=["hdfs", "splunk", "rapid7", "radar"],
+        help="Type of logs being ingested.",
+    )
+
+    parser.add_argument(
+        "--metadata-dir",
+        default=None,
+        help="Optional directory containing metadata/artifact files for the selected log type.",
+    )
+
+    parser.add_argument("--log-path", required=True, help="Path to log file")
     parser.add_argument("--anomaly-labels", default=None, help="Path to anomaly_label.csv")
     parser.add_argument("--event-traces", default=None, help="Path to Event_traces.csv")
     parser.add_argument("--event-occurrence", default=None, help="Path to Event_occurrence_matrix.csv")
@@ -309,18 +302,21 @@ def main():
 
     args = parser.parse_args()
 
-    labels = load_anomaly_labels(args.anomaly_labels)
-    event_traces = load_event_traces(args.event_traces)
-    event_occurrence = load_event_occurrence_matrix(args.event_occurrence)
-    log_templates = load_log_templates(args.log_templates)
+    selected_parser = get_parser(args.log_type)
+
+    artifacts = selected_parser.load_artifacts(
+        metadata_dir=args.metadata_dir,
+        anomaly_labels=args.anomaly_labels,
+        event_traces=args.event_traces,
+        event_occurrence=args.event_occurrence,
+        log_templates=args.log_templates,
+    )
 
     chunks = chunk_log_file(
-        args.log_path,
-        args.chunk_lines,
-        labels,
-        event_traces,
-        event_occurrence,
-        log_templates,
+        log_path=args.log_path,
+        chunk_lines=args.chunk_lines,
+        parser=selected_parser,
+        artifacts=artifacts,
     )
 
     build_index(chunks, args.index_dir, args.model_name)

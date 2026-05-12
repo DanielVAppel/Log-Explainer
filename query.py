@@ -154,6 +154,17 @@ def build_prompt(question: str, chunks: List[Dict]) -> str:
         )
         parts.append(header)
 
+        source_metadata = c.get("source_metadata", {})
+        if source_metadata:
+            parts.append("Source-specific metadata:")
+            for key, value in source_metadata.items():
+                parts.append(f"{key}: {str(value)[:300]}")
+
+        identifiers = c.get("identifiers", [])
+        if identifiers:
+            parts.append("Identifiers:")
+            parts.append(", ".join(identifiers[:15]))
+
         trace_lines = summarize_trace_data(c.get("trace_data", {}))
         if trace_lines:
             parts.append("Event trace summary:")
